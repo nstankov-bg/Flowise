@@ -51,17 +51,20 @@ jobs:
                   username: ${{ secrets.DOCKERHUB_USERNAME }}
                   password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-            # Step 5: Extract the SEMVER version number from the release tag (e.g., 'flowise@X.Y.Z')
+            # Step 5: Extract the SEMVER version number from the release tag (e.g., 'flowise@X.Y.Z') or take it as it comes from workflow dispatch.
             - name: Extract SEMVER
               id: extract_version
               run: |
-                if [[ "${{ github.event.release.tag_name }}" =~ ^flowise@([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
-                  # Sets the extracted SEMVER value to be used in subsequent steps
-                  echo "::set-output name=semver::${BASH_REMATCH[1]}"
-                else
-                  # Error message if the tag doesn't match the required pattern
-                  echo "Invalid release tag for automation. It should match the pattern 'flowise@X.Y.Z'." >&2
-                  exit 1
+                if [ "${{ github.event_name }}" = "release" ]; then
+                  if [[ "${{ github.event.release.tag_name }}" =~ ^flowise@([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+                    echo "::set-output name=semver::${BASH_REMATCH[1]}"
+                  else
+                    echo "Invalid release tag for automation. It should match the pattern 'flowise@X.Y.Z'." >&2
+                    exit 1
+                  fi
+                elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+                  echo "::set-output name=semver::${{ github.event.inputs.tag_version }}"
+                fi
 
             # Step 6: Build and push the Docker image to Docker Hub
             - name: Build and push
